@@ -1,14 +1,47 @@
 // Cliente/src/Paginas/GestionUsuarios.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./GestionUsuarios.css";
 import Logo from "../Imagenes/Logo.jpg"; // Ajusta la ruta de tu logo
 
+// Íconos
+import pencilIcon from "../Imagenes/pencil.png";
+import trashIcon from "../Imagenes/trash.png";
+
 function GestionUsuarios() {
-  // Datos de ejemplo (reemplaza con fetch a tu backend cuando lo tengas)
-  const [usuarios, setUsuarios] = useState([
-    { nombre: "Usuario01", rol: "Gerente", usuario: "User01", correo: "User01@Dominio.com" },
-    { nombre: "Usuario02", rol: "Repartidor", usuario: "User02", correo: "User02@Dominio.com" },
-  ]);
+  const [usuarios, setUsuarios] = useState([]);
+  // Estado para saber qué fila está seleccionada
+  const [selectedRow, setSelectedRow] = useState(null);
+
+  useEffect(() => {
+    fetch("http://localhost:3000/api/usuarios") // Ajusta la URL a tu servidor
+      .then((res) => res.json())
+      .then((response) => {
+        if (response.success) {
+          setUsuarios(response.data);
+        } else {
+          console.error("Error al obtener usuarios:", response.error);
+        }
+      })
+      .catch((error) => {
+        console.error("Error de red o servidor:", error);
+      });
+  }, []);
+
+  // Funciones de ejemplo para editar/eliminar
+  const handleEditar = (usuarioId) => {
+    console.log("Editar usuario:", usuarioId);
+    // Lógica de edición
+  };
+
+  const handleEliminar = (usuarioId) => {
+    console.log("Eliminar usuario:", usuarioId);
+    // Lógica de eliminación
+  };
+
+  // Al hacer clic en la fila, alternamos si está seleccionada o no
+  const handleRowClick = (index) => {
+    setSelectedRow(selectedRow === index ? null : index);
+  };
 
   return (
     <div className="usuarios-page">
@@ -27,7 +60,7 @@ function GestionUsuarios() {
 
       {/* Contenedor principal */}
       <div className="usuarios-content">
-        {/* Tarjeta del formulario */}
+        {/* Tarjeta del formulario (mismo código) */}
         <div className="usuarios-form-container">
           <h3>Registrar Empleado</h3>
           <form className="usuarios-form">
@@ -67,7 +100,7 @@ function GestionUsuarios() {
           </form>
         </div>
 
-        {/* Tarjeta de la tabla (abajo o a la derecha, según el CSS) */}
+        {/* Tarjeta de la tabla */}
         <div className="usuarios-table-container">
           <table className="usuarios-table">
             <thead>
@@ -79,14 +112,53 @@ function GestionUsuarios() {
               </tr>
             </thead>
             <tbody>
-              {usuarios.map((u, index) => (
-                <tr key={index}>
-                  <td>{u.nombre}</td>
-                  <td>{u.rol}</td>
-                  <td>{u.usuario}</td>
-                  <td>{u.correo}</td>
+              {usuarios.map((u, index) => {
+                const isSelected = selectedRow === index;
+                return (
+                  <tr
+                    className="user-row"
+                    key={index}
+                    onClick={() => handleRowClick(index)}
+                  >
+                    <td>{u.nombre}</td>
+                    <td>{u.rol}</td>
+                    <td>{u.usuario}</td>
+                    <td>{u.correo}</td>
+
+                    {/* Muestra los íconos solo si la fila está seleccionada */}
+                    {isSelected && (
+                      <div className="row-icons">
+                        <button
+                          className="btn-icon"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Evita que el clic cierre la selección
+                            handleEditar(u.usuarioId);
+                          }}
+                        >
+                          <img src={pencilIcon} alt="Editar" />
+                        </button>
+                        <button
+                          className="btn-icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEliminar(u.usuarioId);
+                          }}
+                        >
+                          <img src={trashIcon} alt="Eliminar" />
+                        </button>
+                      </div>
+                    )}
+                  </tr>
+                );
+              })}
+
+              {usuarios.length === 0 && (
+                <tr>
+                  <td colSpan="4" style={{ textAlign: "center" }}>
+                    No hay usuarios registrados
+                  </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
