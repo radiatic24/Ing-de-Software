@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
+import PedidosRepartidor from "./Paginas/PedidosRepartidor.jsx";
 
 function App() {
   const [data, setData] = useState(null);
@@ -22,7 +23,14 @@ function App() {
       ) : (
         <p>Cargando...</p>
       )}
+      <Routes>
+            <Route path="/login" element={<LoginGE />} />
+            <Route path="/pedidos" element={<PedidosRepartidor />} />
+            
+      </Routes>
+      
     </div>
+    
   );
 }
 
