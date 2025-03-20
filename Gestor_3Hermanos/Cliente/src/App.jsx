@@ -16,7 +16,7 @@ function App() {
 
   return (
     <div>
-      <h1>Frontend React + Backend Node.js</h1>
+      <h1>GESTOR 3 HERMANOS</h1>
       {data ? (
         <p>Respuesta del backend: {data.message}</p>
       ) : (

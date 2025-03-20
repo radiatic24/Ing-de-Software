@@ -1,23 +1,40 @@
 import express from 'express';
 import cors from 'cors';
-import connectDB from './db.js'; // Usando el archivo de conexión que creaste antes
+import connectDB from './db.js';
+
+// Importa todas las rutas
+import usuarioRoutes from './routes/usuarios-Routes.js';
+import pedidoRoutes from './routes/pedidos-Routes.js';
+import productoRoutes from './routes/productos-Routes.js';
+import solicitudRoutes from './routes/solicitudes-Routes.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; 
 
 // Middlewares
-app.use(cors()); // Permite peticiones desde el frontend
-app.use(express.json()); // Para parsear JSON
+app.use(cors());
+app.use(express.json());
 
-// Conectar a MongoDB
+// Conexión a MongoDB
 connectDB();
 
-// Ruta de prueba
+//rutas CRUD
+app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/pedidos', pedidoRoutes);
+app.use('/api/productos', productoRoutes);
+app.use('/api/solicitudes', solicitudRoutes);
+
+// Ruta de prueba (opcional)
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Backend jalando al 100' });
 });
 
+// Ruta base
+app.get('/', (req, res) => {
+  res.send('Gestor 3Hermanos - API');
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`Servidor backend en http://localhost:${PORT}`);
+  console.log(`Servidor backend en: http://localhost:${PORT}`);
 });
