@@ -17,15 +17,17 @@ router.get('/', async (req, res) => {
 // Obtener usuario específico
 router.get('/:id', async (req, res) => {
   try {
-    const usuario = await Usuario.findOne({ usuarioId: req.params.id }).select('-contraseña');
+    const usuarioId = Number(req.params.id);
+    if (isNaN(usuarioId)) {
+      return res.status(400).json({ success: false, error: 'ID de usuario inválido' });
+    }
+
+    const usuario = await Usuario.findOne({ usuarioId }).select('-contraseña');
     
     if (!usuario) {
-      return res.status(404).json({ 
-        success: false, 
-        error: `Usuario con ID ${req.params.id} no encontrado` 
-      });
+      return res.status(404).json({ success: false, error: `Usuario con ID ${usuarioId} no encontrado` });
     }
-    
+
     res.json({ success: true, data: usuario });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -37,17 +39,18 @@ router.post('/', async (req, res) => {
   try {
     const { contraseña, ...userData } = req.body;
 
-    // Validar existencia de campos requeridos
-    if (!contraseña || !userData.correo) {
-      return res.status(400).json({
-        success: false,
-        error: 'Faltan campos requeridos'
-      });
+    if (!contraseña || !userData.correo || !userData.usuarioId) {
+      return res.status(400).json({ success: false, error: 'Faltan campos requeridos' });
+    }
+
+    // Verificar si el usuario ya existe
+    const usuarioExistente = await Usuario.findOne({ $or: [{ usuarioId: userData.usuarioId }, { correo: userData.correo }] });
+    if (usuarioExistente) {
+      return res.status(400).json({ success: false, error: 'El usuario ya existe con ese ID o correo' });
     }
 
     // Hash de la contraseña
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(contraseña, salt);
+    const hashedPassword = await bcrypt.hash(contraseña, 10);
 
     const nuevoUsuario = new Usuario({
       ...userData,
@@ -55,7 +58,7 @@ router.post('/', async (req, res) => {
     });
 
     const savedUser = await nuevoUsuario.save();
-    
+
     // Preparar respuesta sin contraseña
     const userResponse = savedUser.toObject();
     delete userResponse.contraseña;
@@ -69,26 +72,24 @@ router.post('/', async (req, res) => {
 // Actualizar usuario
 router.put('/:id', async (req, res) => {
   try {
-    const { contraseña, ...updateData } = req.body;
-    const updates = { ...updateData };
+    const usuarioId = Number(req.params.id);
+    if (isNaN(usuarioId)) {
+      return res.status(400).json({ success: false, error: 'ID de usuario inválido' });
+    }
 
-    // Hash nueva contraseña si se proporciona
+    const { contraseña, ...updateData } = req.body;
     if (contraseña) {
-      const salt = await bcrypt.genSalt(10);
-      updates.contraseña = await bcrypt.hash(contraseña, salt);
+      updateData.contraseña = await bcrypt.hash(contraseña, 10);
     }
 
     const usuarioActualizado = await Usuario.findOneAndUpdate(
-      { usuarioId: req.params.id },
-      updates,
+      { usuarioId },
+      updateData,
       { new: true, runValidators: true }
     ).select('-contraseña');
 
     if (!usuarioActualizado) {
-      return res.status(404).json({
-        success: false,
-        error: `Usuario con ID ${req.params.id} no encontrado`
-      });
+      return res.status(404).json({ success: false, error: `Usuario con ID ${usuarioId} no encontrado` });
     }
 
     res.json({ success: true, data: usuarioActualizado });
@@ -100,21 +101,18 @@ router.put('/:id', async (req, res) => {
 // Eliminar usuario
 router.delete('/:id', async (req, res) => {
   try {
-    const usuarioEliminado = await Usuario.findOneAndDelete({ 
-      usuarioId: req.params.id 
-    });
-
-    if (!usuarioEliminado) {
-      return res.status(404).json({
-        success: false,
-        error: `Usuario con ID ${req.params.id} no encontrado`
-      });
+    const usuarioId = Number(req.params.id);
+    if (isNaN(usuarioId)) {
+      return res.status(400).json({ success: false, error: 'ID de usuario inválido' });
     }
 
-    res.json({ 
-      success: true, 
-      message: `Usuario ${usuarioEliminado.nombre} eliminado correctamente` 
-    });
+    const usuarioEliminado = await Usuario.findOneAndDelete({ usuarioId });
+
+    if (!usuarioEliminado) {
+      return res.status(404).json({ success: false, error: `Usuario con ID ${usuarioId} no encontrado` });
+    }
+
+    res.json({ success: true, message: `Usuario ${usuarioEliminado.nombre} eliminado correctamente` });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -123,23 +121,21 @@ router.delete('/:id', async (req, res) => {
 // Añadir movimiento de caja
 router.post('/:id/caja', async (req, res) => {
   try {
-    const { monto, referencia, motivo } = req.body;
-    
-    // Validar campos requeridos
-    if (!monto || !referencia || !motivo) {
-      return res.status(400).json({
-        success: false,
-        error: 'Faltan campos requeridos: monto, referencia, motivo'
-      });
+    const usuarioId = Number(req.params.id);
+    if (isNaN(usuarioId)) {
+      return res.status(400).json({ success: false, error: 'ID de usuario inválido' });
     }
 
-    const usuario = await Usuario.findOne({ usuarioId: req.params.id });
-    
+    const { monto, referencia, motivo } = req.body;
+
+    if (!monto || !referencia || !motivo) {
+      return res.status(400).json({ success: false, error: 'Faltan campos requeridos: monto, referencia, motivo' });
+    }
+
+    const usuario = await Usuario.findOne({ usuarioId });
+
     if (!usuario) {
-      return res.status(404).json({
-        success: false,
-        error: `Usuario con ID ${req.params.id} no encontrado`
-      });
+      return res.status(404).json({ success: false, error: `Usuario con ID ${usuarioId} no encontrado` });
     }
 
     const nuevoMovimiento = {
@@ -152,10 +148,7 @@ router.post('/:id/caja', async (req, res) => {
     usuario.caja.push(nuevoMovimiento);
     await usuario.save();
 
-    res.status(201).json({
-      success: true,
-      data: usuario.caja[usuario.caja.length - 1]
-    });
+    res.status(201).json({ success: true, data: usuario.caja[usuario.caja.length - 1] });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }
