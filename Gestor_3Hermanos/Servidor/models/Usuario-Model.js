@@ -24,6 +24,7 @@ const cajaSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+//asignar el id del usuario de forma automatica
 
 const usuarioSchema = new mongoose.Schema({
   usuarioId: {
@@ -45,7 +46,7 @@ const usuarioSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: {
-      values: ['Gerente', 'Empleado'],
+      values: ['Gerente', 'Empleado', 'Repartidor'],
       message: 'Rol no válido'
     }
   },
