@@ -154,4 +154,39 @@ router.post('/:id/caja', async (req, res) => {
   }
 });
 
+/////////////////////////////////////////////Kevin 
+// Ruta de Login
+router.post('/login', async (req, res) => {
+  try {
+    const { correo, contraseña } = req.body;
+
+    if (!correo || !contraseña) {
+      return res.status(400).json({ success: false, error: 'Correo y contraseña son requeridos' });
+    }
+
+    // Buscar usuario por correo
+    const usuario = await Usuario.findOne({ correo });
+
+    if (!usuario) {
+      return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+    }
+
+    // Verificar contraseña
+    const passwordValida = await bcrypt.compare(contraseña, usuario.contraseña);
+
+    if (!passwordValida) {
+      return res.status(401).json({ success: false, error: 'Contraseña incorrecta' });
+    }
+
+    // Preparar respuesta sin contraseña
+    const userResponse = usuario.toObject();
+    delete userResponse.contraseña;
+
+    res.json({ success: true, message: 'Inicio de sesión exitoso', data: userResponse });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+///////////////////////////fin de kevin
+
 export default router;
