@@ -1,51 +1,92 @@
 // Cliente/src/Paginas/GestionUsuarios.jsx
 import React, { useState, useEffect } from "react";
-import "./GestionUsuarios.css";
-import Logo from "../Imagenes/Logo.jpg"; // Ajusta la ruta de tu logo
 
-// Íconos
+import "./GestionUsuarios.css";
+import Logo from "../Imagenes/Logo.jpg";
 import pencilIcon from "../Imagenes/pencil.png";
 import trashIcon from "../Imagenes/trash.png";
 
 function GestionUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
-  // Estado para saber qué fila está seleccionada
   const [selectedRow, setSelectedRow] = useState(null);
 
+  // Estados del formulario
+  const [nombre, setNombre] = useState('');
+  const [rol, setRol] = useState('');
+  const [usuario, setUsuario] = useState('');
+  const [correo, setCorreo] = useState('');
+
   useEffect(() => {
-    fetch("http://localhost:3000/api/usuarios") // Ajusta la URL a tu servidor
-      .then((res) => res.json())
-      .then((response) => {
-        if (response.success) {
-          setUsuarios(response.data);
-        } else {
-          console.error("Error al obtener usuarios:", response.error);
-        }
-      })
-      .catch((error) => {
-        console.error("Error de red o servidor:", error);
-      });
+    cargarUsuarios();
   }, []);
 
-  // Funciones de ejemplo para editar/eliminar
+  const cargarUsuarios = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/usuarios");
+      const response = await res.json();
+      if (response.success) {
+        setUsuarios(response.data);
+      } else {
+        console.error("Error al obtener usuarios:", response.error);
+      }
+    } catch (error) {
+      console.error("Error de red o servidor:", error);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const nuevoEmpleado = {
+      nombre,
+      rol,
+      usuario,
+      correo,
+      usuarioId: Math.floor(Math.random() * 100000),
+      contraseña: '1234' // Contraseña por defecto
+    };
+
+    try {
+      const res = await fetch("http://localhost:3000/api/usuarios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nuevoEmpleado),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setUsuarios([...usuarios, data.data]);
+        // Limpiar formulario
+        setNombre('');
+        setRol('');
+        setUsuario('');
+        setCorreo('');
+      } else {
+        console.error("Error al registrar:", data.error);
+      }
+    } catch (err) {
+      console.error("Error de red:", err);
+    }
+  };
+
   const handleEditar = (usuarioId) => {
     console.log("Editar usuario:", usuarioId);
-    // Lógica de edición
+    // Lógica de edición futura
   };
 
   const handleEliminar = (usuarioId) => {
     console.log("Eliminar usuario:", usuarioId);
-    // Lógica de eliminación
+    // Lógica de eliminación futura
   };
 
-  // Al hacer clic en la fila, alternamos si está seleccionada o no
   const handleRowClick = (index) => {
     setSelectedRow(selectedRow === index ? null : index);
   };
 
   return (
     <div className="usuarios-page">
-      {/* Barra superior café */}
+      {/* Barra superior */}
       <nav className="usuarios-navbar">
         <div className="navbar-logo">
           <img src={Logo} alt="Gestor 3 Hermanos" />
@@ -58,21 +99,24 @@ function GestionUsuarios() {
         </ul>
       </nav>
 
-      {/* Contenedor principal */}
       <div className="usuarios-content">
-        {/* Tarjeta del formulario (mismo código) */}
+        {/* Formulario */}
         <div className="usuarios-form-container">
           <h3>Registrar Empleado</h3>
-          <form className="usuarios-form">
-            {/* Fila 1: Nombre / Rol */}
+          <form className="usuarios-form" onSubmit={handleSubmit}>
             <div className="form-row">
               <div className="form-group">
                 <label>Nombre:</label>
-                <input type="text" placeholder="Nombre del empleado" />
+                <input
+                  type="text"
+                  placeholder="Nombre del empleado"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label>Rol:</label>
-                <select>
+                <select value={rol} onChange={(e) => setRol(e.target.value)}>
                   <option value="">Seleccionar</option>
                   <option value="Gerente">Gerente</option>
                   <option value="Repartidor">Repartidor</option>
@@ -81,15 +125,22 @@ function GestionUsuarios() {
               </div>
             </div>
 
-            {/* Fila 2: Usuario / Correo / Botón */}
             <div className="form-row">
               <div className="form-group">
                 <label>Usuario:</label>
-                <input type="text" placeholder="Nombre de Usuario" />
+                <input type="text" placeholder="Nombre de Usuario"
+                  value={usuario}
+                  onChange={(e) => setUsuario(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label>Correo:</label>
-                <input type="email" placeholder="Dirección de Correo Electrónico" />
+                <input
+                  type="email"
+                  placeholder="Dirección de Correo Electrónico"
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
+                />
               </div>
               <div className="form-group button-group">
                 <button type="submit" className="btn-registrar">
@@ -100,7 +151,7 @@ function GestionUsuarios() {
           </form>
         </div>
 
-        {/* Tarjeta de la tabla */}
+        {/* Tabla */}
         <div className="usuarios-table-container">
           <table className="usuarios-table">
             <thead>
@@ -125,13 +176,12 @@ function GestionUsuarios() {
                     <td>{u.usuario}</td>
                     <td>{u.correo}</td>
 
-                    {/* Muestra los íconos solo si la fila está seleccionada */}
                     {isSelected && (
                       <div className="row-icons">
                         <button
                           className="btn-icon"
                           onClick={(e) => {
-                            e.stopPropagation(); // Evita que el clic cierre la selección
+                            e.stopPropagation();
                             handleEditar(u.usuarioId);
                           }}
                         >
