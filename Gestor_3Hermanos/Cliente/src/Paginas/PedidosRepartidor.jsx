@@ -1,46 +1,34 @@
 // src/Paginas/PedidosRepartidor.jsx
-import React, { useState } from "react";
-import PedidosRepartidorC from "../Componentes/PedidosRepartidorC.jsx";
+import React, { useState, useEffect } from "react";
 import "./PedidosRepartidor.css";
-
-// Importa tu nueva imagen (ajusta la ruta si es distinta)
 import LogoSinTexto from "../Imagenes/Logosintexto.jpg";
+
+// Importa tu componente que renderiza la lista de pedidos
+import PedidosRepartidorC from "../Componentes/PedidosRepartidorC.jsx";
 
 function PedidosRepartidor() {
   const [busqueda, setBusqueda] = useState("");
+  const [pedidos, setPedidos] = useState([]);
 
-  // Ejemplo de pedidos
-  const [pedidos, setPedidos] = useState([
-    {
-      id: 13,
-      direccion: "Mexico Sur #177 Col. Atenas",
-      total: 150,
-      nombreCliente: "Alejandro",
-      estado: "Listo p Entrega",
-    },
-    {
-      id: 5,
-      direccion: "Camilo Torres #117 Col. 2 de Agosto",
-      total: 100,
-      nombreCliente: "Juan Luis",
-      estado: "En Reparto",
-    },
-    {
-      id: 10,
-      direccion: "Av Siempreviva #742",
-      total: 300,
-      nombreCliente: "Homer",
-      estado: "En Reparto",
-    },
-    {
-      id: 4,
-      direccion: "Escobedo #177 Col. Tepeyac",
-      total: 150,
-      nombreCliente: "Juan Daniel",
-      estado: "En Reparto",
-    },
-  ]);
+  // Cargar pedidos desde la base de datos al montar el componente
+  useEffect(() => {
+    // Ajusta la ruta a tu servidor/puerto y endpoint
+    fetch("http://localhost:3000/api/pedidos")
+      .then((res) => res.json())
+      .then((data) => {
+        // asumiendo que tu servidor responde con un array de pedidos
+        // o con un objeto { success: true, data: [...] }
+        // ajusta según tu formato real
+        if (data.success) {
+          setPedidos(data.data); // o data.pedidos
+        } else {
+          console.error("Error al obtener pedidos:", data.error);
+        }
+      })
+      .catch((err) => console.error("Error de red o servidor:", err));
+  }, []);
 
+  // Filtra pedidos según la búsqueda
   const pedidosFiltrados = pedidos.filter((pedido) =>
     pedido.direccion.toLowerCase().includes(busqueda.toLowerCase())
   );
@@ -51,11 +39,10 @@ function PedidosRepartidor() {
       <div className="pedidos-header">
         <img src={LogoSinTexto} alt="Logo sin texto" className="header-logo" />
       </div>
-
+     
       <div className="pedidos-content">
         <div className="search-container">
           <div className="search-box">
-            {/* Puedes usar un ícono Unicode o una imagen, por ejemplo */}
             <span className="search-icon">&#x1F50E;</span>
             <input
               type="text"
@@ -68,6 +55,7 @@ function PedidosRepartidor() {
         </div>
 
         <div className="pedidos-container">
+          {/* Muestra los pedidos filtrados */}
           <PedidosRepartidorC pedidos={pedidosFiltrados} />
         </div>
       </div>

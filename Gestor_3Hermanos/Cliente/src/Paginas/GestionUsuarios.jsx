@@ -1,7 +1,6 @@
-// Cliente/src/Paginas/GestionUsuarios.jsx
 import React, { useState, useEffect } from "react";
 import "./GestionUsuarios.css";
-import Logo from "../Imagenes/Logo.jpg"; // Ajusta la ruta de tu logo
+import Header from "../Componentes/Header.jsx";
 
 // Íconos
 import pencilIcon from "../Imagenes/pencil.png";
@@ -9,11 +8,20 @@ import trashIcon from "../Imagenes/trash.png";
 
 function GestionUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
-  // Estado para saber qué fila está seleccionada
   const [selectedRow, setSelectedRow] = useState(null);
 
+  // Estados para el formulario (sin usuarioId)
+  const [nombre, setNombre] = useState("");
+  const [rol, setRol] = useState("");
+  const [contraseña, setContraseña] = useState("");
+  const [correo, setCorreo] = useState("");
+
+  // Estado para el mensaje de registro
+  const [mensaje, setMensaje] = useState("");
+
+  // Al montar, cargar los usuarios existentes
   useEffect(() => {
-    fetch("http://localhost:3000/api/usuarios") // Ajusta la URL a tu servidor
+    fetch("http://localhost:3000/api/usuarios")
       .then((res) => res.json())
       .then((response) => {
         if (response.success) {
@@ -22,57 +30,87 @@ function GestionUsuarios() {
           console.error("Error al obtener usuarios:", response.error);
         }
       })
-      .catch((error) => {
-        console.error("Error de red o servidor:", error);
-      });
+      .catch((error) =>
+        console.error("Error de red o servidor:", error)
+      );
   }, []);
 
-  // Funciones de ejemplo para editar/eliminar
-  const handleEditar = (usuarioId) => {
-    console.log("Editar usuario:", usuarioId);
-    // Lógica de edición
-  };
-
-  const handleEliminar = (usuarioId) => {
-    console.log("Eliminar usuario:", usuarioId);
-    // Lógica de eliminación
-  };
-
-  // Al hacer clic en la fila, alternamos si está seleccionada o no
+  // Alterna la selección de la fila (para mostrar iconos)
   const handleRowClick = (index) => {
     setSelectedRow(selectedRow === index ? null : index);
   };
 
+  // Maneja el envío del formulario
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // Validar campos requeridos
+    if (!nombre || !rol || !contraseña || !correo) {
+      setMensaje("Faltan campos requeridos");
+      return;
+    }
+
+    const nuevoUsuario = { nombre, rol, contraseña, correo };
+
+    fetch("http://localhost:3000/api/usuarios", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nuevoUsuario),
+    })
+      .then((res) => res.json())
+      .then((response) => {
+        if (response.success) {
+          setUsuarios([...usuarios, response.data]);
+          setMensaje("Usuario registrado correctamente");
+          // Limpiar campos
+          setNombre("");
+          setRol("");
+          setContraseña("");
+          setCorreo("");
+        } else {
+          setMensaje("Error: " + response.error);
+        }
+      })
+      .catch((error) => {
+        console.error("Error al registrar usuario:", error);
+        setMensaje("Error al registrar usuario");
+      });
+  };
+
+  // Funciones para editar y eliminar usando el _id generado por MongoDB
+  const handleEditar = (id) => {
+    console.log("Editar usuario:", id);
+    // Implementa la lógica de edición según necesites
+  };
+
+  const handleEliminar = (id) => {
+    console.log("Eliminar usuario:", id);
+    // Implementa la lógica de eliminación según necesites
+  };
+
   return (
     <div className="usuarios-page">
-      {/* Barra superior café */}
-      <nav className="usuarios-navbar">
-        <div className="navbar-logo">
-          <img src={Logo} alt="Gestor 3 Hermanos" />
-        </div>
-        <ul className="navbar-links">
-          <li><a href="#usuarios" className="active">Usuarios</a></li>
-          <li><a href="#pedidos">Pedidos</a></li>
-          <li><a href="#inventario">Inventario</a></li>
-          <li><a href="#caja">Caja</a></li>
-        </ul>
-      </nav>
+      <Header />
 
-      {/* Contenedor principal */}
       <div className="usuarios-content">
-        {/* Tarjeta del formulario (mismo código) */}
         <div className="usuarios-form-container">
           <h3>Registrar Empleado</h3>
-          <form className="usuarios-form">
+          {mensaje && <div className="mensaje">{mensaje}</div>}
+          <form className="usuarios-form" onSubmit={handleSubmit}>
             {/* Fila 1: Nombre / Rol */}
             <div className="form-row">
               <div className="form-group">
                 <label>Nombre:</label>
-                <input type="text" placeholder="Nombre del empleado" />
+                <input
+                  type="text"
+                  placeholder="Nombre del empleado"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label>Rol:</label>
-                <select>
+                <select value={rol} onChange={(e) => setRol(e.target.value)}>
                   <option value="">Seleccionar</option>
                   <option value="Gerente">Gerente</option>
                   <option value="Repartidor">Repartidor</option>
@@ -81,16 +119,30 @@ function GestionUsuarios() {
               </div>
             </div>
 
-            {/* Fila 2: Usuario / Correo / Botón */}
+            {/* Fila 2: Contraseña / Correo */}
             <div className="form-row">
               <div className="form-group">
-                <label>Usuario:</label>
-                <input type="text" placeholder="Nombre de Usuario" />
+                <label>Contraseña:</label>
+                <input
+                  type="text"
+                  placeholder="Contraseña del trabajador"
+                  value={contraseña}
+                  onChange={(e) => setContraseña(e.target.value)}
+                />
               </div>
               <div className="form-group">
                 <label>Correo:</label>
-                <input type="email" placeholder="Dirección de Correo Electrónico" />
+                <input
+                  type="email"
+                  placeholder="Dirección de Correo Electrónico"
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
+                />
               </div>
+            </div>
+
+            {/* Fila 3: Solo botón (centrado a la derecha) */}
+            <div className="form-row">
               <div className="form-group button-group">
                 <button type="submit" className="btn-registrar">
                   Registrar Empleado
@@ -100,14 +152,13 @@ function GestionUsuarios() {
           </form>
         </div>
 
-        {/* Tarjeta de la tabla */}
+        {/* Tabla de usuarios */}
         <div className="usuarios-table-container">
           <table className="usuarios-table">
             <thead>
               <tr>
                 <th>Empleado</th>
                 <th>Rol</th>
-                <th>Usuario</th>
                 <th>Correo Electrónico</th>
               </tr>
             </thead>
@@ -117,22 +168,19 @@ function GestionUsuarios() {
                 return (
                   <tr
                     className="user-row"
-                    key={index}
+                    key={u._id}
                     onClick={() => handleRowClick(index)}
                   >
                     <td>{u.nombre}</td>
                     <td>{u.rol}</td>
-                    <td>{u.usuario}</td>
                     <td>{u.correo}</td>
-
-                    {/* Muestra los íconos solo si la fila está seleccionada */}
                     {isSelected && (
                       <div className="row-icons">
                         <button
                           className="btn-icon"
                           onClick={(e) => {
-                            e.stopPropagation(); // Evita que el clic cierre la selección
-                            handleEditar(u.usuarioId);
+                            e.stopPropagation();
+                            handleEditar(u._id);
                           }}
                         >
                           <img src={pencilIcon} alt="Editar" />
@@ -141,7 +189,7 @@ function GestionUsuarios() {
                           className="btn-icon"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleEliminar(u.usuarioId);
+                            handleEliminar(u._id);
                           }}
                         >
                           <img src={trashIcon} alt="Eliminar" />
@@ -151,10 +199,9 @@ function GestionUsuarios() {
                   </tr>
                 );
               })}
-
               {usuarios.length === 0 && (
                 <tr>
-                  <td colSpan="4" style={{ textAlign: "center" }}>
+                  <td colSpan="3" style={{ textAlign: "center" }}>
                     No hay usuarios registrados
                   </td>
                 </tr>

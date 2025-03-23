@@ -1,7 +1,10 @@
 import React from "react";
 import styled from 'styled-components';
 
-import logo from '../components/icons/logo.png';
+import Icon from "./Icon";
+import logo from './icons/Logo.jpg';
+import homeicon from './icons/Home.png';
+
 
 
 
@@ -50,6 +53,7 @@ const Header = () => (
     <Logo src={logo} alt="3Hermanos" />
     <Nav>
       <ul>
+        <li><a href=""><Icon src={homeicon} alt="Home" /></a></li>
         <li><a href="">Pedidos</a></li>
         <li><a href="">Caja</a></li>
         <li><a href="">Inventario</a></li>
