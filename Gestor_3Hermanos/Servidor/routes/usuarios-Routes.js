@@ -1,156 +1,170 @@
 import express from 'express';
-import bcrypt from 'bcryptjs';
 import Usuario from '../models/Usuario-Model.js';
 
 const router = express.Router();
 
-// Obtener todos los usuarios (sin contraseña)
+// Obtener todos los usuarios
 router.get('/', async (req, res) => {
   try {
-    const usuarios = await Usuario.find().select('-contraseña').lean();
-    res.json({ success: true, data: usuarios });
+    const usuarios = await Usuario.find()
+      .select('-contraseña -__v')
+      .lean();
+
+    res.json({ 
+      success: true,
+      data: usuarios 
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
-// Obtener usuario específico
+// Obtener usuario por ID
 router.get('/:id', async (req, res) => {
   try {
-    const usuarioId = Number(req.params.id);
-    if (isNaN(usuarioId)) {
-      return res.status(400).json({ success: false, error: 'ID de usuario inválido' });
-    }
+    const usuario = await Usuario.findOne({ usuarioId: req.params.id })
+      .select('-contraseña -__v');
 
-    const usuario = await Usuario.findOne({ usuarioId }).select('-contraseña');
-    
     if (!usuario) {
-      return res.status(404).json({ success: false, error: `Usuario con ID ${usuarioId} no encontrado` });
+      return res.status(404).json({
+        success: false,
+        error: `Usuario con ID ${req.params.id} no encontrado`
+      });
     }
 
-    res.json({ success: true, data: usuario });
+    res.json({ 
+      success: true,
+      data: usuario 
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
-// Crear nuevo usuario
+// Crear usuario
 router.post('/', async (req, res) => {
   try {
-    const { contraseña, ...userData } = req.body;
+    const { nombre, contraseña, rol, correo, caja } = req.body;
 
-    if (!contraseña || !userData.correo || !userData.usuarioId) {
-      return res.status(400).json({ success: false, error: 'Faltan campos requeridos' });
+    // Validar campos requeridos
+    const camposRequeridos = [];
+    if (!nombre) camposRequeridos.push('nombre');
+    if (!contraseña) camposRequeridos.push('contraseña');
+    if (!rol) camposRequeridos.push('rol');
+    if (!correo) camposRequeridos.push('correo');
+
+    if (camposRequeridos.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Faltan campos requeridos: ${camposRequeridos.join(', ')}`
+      });
     }
 
-    // Verificar si el usuario ya existe
-    const usuarioExistente = await Usuario.findOne({ $or: [{ usuarioId: userData.usuarioId }, { correo: userData.correo }] });
-    if (usuarioExistente) {
-      return res.status(400).json({ success: false, error: 'El usuario ya existe con ese ID o correo' });
-    }
-
-    // Hash de la contraseña
-    const hashedPassword = await bcrypt.hash(contraseña, 10);
-
+    // Crear usuario
     const nuevoUsuario = new Usuario({
-      ...userData,
-      contraseña: hashedPassword
+      nombre,
+      contraseña,
+      rol,
+      correo,
+      caja: caja || []
     });
 
-    const savedUser = await nuevoUsuario.save();
+    const usuarioGuardado = await nuevoUsuario.save();
 
-    // Preparar respuesta sin contraseña
-    const userResponse = savedUser.toObject();
-    delete userResponse.contraseña;
+    // Preparar respuesta
+    const respuesta = usuarioGuardado.toJSON();
+    
+    res.status(201).json({ 
+      success: true,
+      data: respuesta 
+    });
 
-    res.status(201).json({ success: true, data: userResponse });
   } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    let mensajeError = error.message;
+    
+    // Manejar errores de duplicados
+    if (error.code === 11000) {
+      if (error.keyPattern.correo) {
+        mensajeError = 'El correo electrónico ya está registrado';
+      } else if (error.keyPattern.usuarioId) {
+        mensajeError = 'Error generando ID único (reintente)';
+      }
+    }
+
+    res.status(400).json({ 
+      success: false,
+      error: mensajeError 
+    });
   }
 });
 
 // Actualizar usuario
 router.put('/:id', async (req, res) => {
   try {
-    const usuarioId = Number(req.params.id);
-    if (isNaN(usuarioId)) {
-      return res.status(400).json({ success: false, error: 'ID de usuario inválido' });
-    }
-
-    const { contraseña, ...updateData } = req.body;
-    if (contraseña) {
-      updateData.contraseña = await bcrypt.hash(contraseña, 10);
-    }
+    const updates = req.body;
+    delete updates.usuarioId;
+    delete updates.correo;
 
     const usuarioActualizado = await Usuario.findOneAndUpdate(
-      { usuarioId },
-      updateData,
-      { new: true, runValidators: true }
-    ).select('-contraseña');
+      { usuarioId: req.params.id },
+      updates,
+      { 
+        new: true,
+        runValidators: true 
+      }
+    ).select('-contraseña -__v');
 
     if (!usuarioActualizado) {
-      return res.status(404).json({ success: false, error: `Usuario con ID ${usuarioId} no encontrado` });
+      return res.status(404).json({
+        success: false,
+        error: `Usuario con ID ${req.params.id} no encontrado`
+      });
     }
 
-    res.json({ success: true, data: usuarioActualizado });
+    res.json({ 
+      success: true,
+      data: usuarioActualizado 
+    });
   } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    res.status(400).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
 // Eliminar usuario
 router.delete('/:id', async (req, res) => {
   try {
-    const usuarioId = Number(req.params.id);
-    if (isNaN(usuarioId)) {
-      return res.status(400).json({ success: false, error: 'ID de usuario inválido' });
-    }
-
-    const usuarioEliminado = await Usuario.findOneAndDelete({ usuarioId });
+    const usuarioEliminado = await Usuario.findOneAndDelete({ 
+      usuarioId: req.params.id 
+    });
 
     if (!usuarioEliminado) {
-      return res.status(404).json({ success: false, error: `Usuario con ID ${usuarioId} no encontrado` });
+      return res.status(404).json({
+        success: false,
+        error: `Usuario con ID ${req.params.id} no encontrado`
+      });
     }
 
-    res.json({ success: true, message: `Usuario ${usuarioEliminado.nombre} eliminado correctamente` });
+    res.json({ 
+      success: true,
+      data: {
+        message: `Usuario ${usuarioEliminado.nombre} eliminado`,
+        usuarioId: usuarioEliminado.usuarioId
+      }
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Añadir movimiento de caja
-router.post('/:id/caja', async (req, res) => {
-  try {
-    const usuarioId = Number(req.params.id);
-    if (isNaN(usuarioId)) {
-      return res.status(400).json({ success: false, error: 'ID de usuario inválido' });
-    }
-
-    const { monto, referencia, motivo } = req.body;
-
-    if (!monto || !referencia || !motivo) {
-      return res.status(400).json({ success: false, error: 'Faltan campos requeridos: monto, referencia, motivo' });
-    }
-
-    const usuario = await Usuario.findOne({ usuarioId });
-
-    if (!usuario) {
-      return res.status(404).json({ success: false, error: `Usuario con ID ${usuarioId} no encontrado` });
-    }
-
-    const nuevoMovimiento = {
-      monto: Number(monto),
-      referencia,
-      motivo,
-      fechaHora: req.body.fechaHora || Date.now()
-    };
-
-    usuario.caja.push(nuevoMovimiento);
-    await usuario.save();
-
-    res.status(201).json({ success: true, data: usuario.caja[usuario.caja.length - 1] });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
